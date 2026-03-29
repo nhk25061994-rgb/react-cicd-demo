@@ -50,18 +50,20 @@ spec:
         }
         stage("Update GitOps") {
             steps {
-                sh "sed -i 's|tag:.*|tag: ${IMAGE_TAG}|' helm/react-app/values.yaml"
-                sh "git config user.email 'jenkins@ci.local'"
-                sh "git config user.name 'Jenkins'"
-                sh "git checkout -B main"
-                sh "git add helm/react-app/values.yaml"
-                sh "git commit -m 'ci: update image to ${IMAGE_TAG}'"
-                sh "git push origin HEAD:main"
+                sshagent(credentials: ['github-ssh']) {
+                    sh "sed -i 's|tag:.*|tag: ${IMAGE_TAG}|' helm/react-app/values.yaml"
+                    sh "git config user.email 'jenkins@ci.local'"
+                    sh "git config user.name 'Jenkins'"
+                    sh "git checkout -B main"
+                    sh "git add helm/react-app/values.yaml"
+                    sh "git commit -m 'ci: update image to ${IMAGE_TAG}'"
+                    sh "git push origin HEAD:main"
+                }
             }
         }
     }
     post {
-        success { echo "🎉 Pipeline succeeded! Image: ${IMAGE_REPO}:${IMAGE_TAG}" }
-        failure { echo "❌ Pipeline failed!" }
+        success { echo "Pipeline succeeded! Image: ${IMAGE_REPO}:${IMAGE_TAG}" }
+        failure { echo "Pipeline failed!" }
     }
 }
