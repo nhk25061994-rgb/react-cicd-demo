@@ -13,25 +13,25 @@ pipeline {
         }
         stage("Build Docker Image") {
             steps {
-                bat "docker build -t %IMAGE_REPO%:v%BUILD_NUMBER% ./app"
+                sh "docker build -t ${IMAGE_REPO}:${IMAGE_TAG} ./app"
             }
         }
         stage("Push to DockerHub") {
             steps {
                 withCredentials([usernamePassword(credentialsId: "dockerhub-credentials", usernameVariable: "USER", passwordVariable: "PASS")]) {
-                    bat "docker login -u %USER% -p %PASS%"
-                    bat "docker push %IMAGE_REPO%:v%BUILD_NUMBER%"
+                    sh "docker login -u $USER -p $PASS"
+                    sh "docker push ${IMAGE_REPO}:${IMAGE_TAG}"
                 }
             }
         }
         stage("Update GitOps") {
             steps {
-                bat "powershell -Command \"(Get-Content helm/react-app/values.yaml) -replace 'tag:.*', 'tag: v%BUILD_NUMBER%' | Set-Content helm/react-app/values.yaml\""
-                bat "git config user.email \"jenkins@ci.local\""
-                bat "git config user.name \"Jenkins\""
-                bat "git add helm/react-app/values.yaml"
-                bat "git commit -m \"ci: update image to v%BUILD_NUMBER%\""
-                bat "git push origin main"
+                sh "sed -i 's|tag:.*|tag: ${IMAGE_TAG}|' helm/react-app/values.yaml"
+                sh "git config user.email 'jenkins@ci.local'"
+                sh "git config user.name 'Jenkins'"
+                sh "git add helm/react-app/values.yaml"
+                sh "git commit -m 'ci: update image to ${IMAGE_TAG}'"
+                sh "git push origin main"
             }
         }
     }
