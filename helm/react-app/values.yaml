@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   repository: nhk519519/react-demo-app
   pullPolicy: IfNotPresent
-  tag: v22
+  tag: v23
 
 service:
   type: ClusterIP
