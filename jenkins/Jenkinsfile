@@ -1,38 +1,42 @@
 pipeline {
     agent any
     environment {
-        IMAGE_REPO  = "nhk25061994-rgb/react-demo-app"
-        IMAGE_TAG   = "${env.BUILD_NUMBER}"
-        FULL_IMAGE  = "${IMAGE_REPO}:${IMAGE_TAG}"
+        IMAGE_REPO = "nhk519519/react-demo-app"
+        IMAGE_TAG  = "v${env.BUILD_NUMBER}"
     }
     stages {
         stage("Checkout") {
-            steps { checkout scm }
-        }
-        stage("Build") {
             steps {
-                sh "docker build -t ${FULL_IMAGE} ./app"
+                checkout scm
+                echo "Code checked out!"
             }
         }
-        stage("Push") {
+        stage("Build Docker Image") {
+            steps {
+                bat "docker build -t %IMAGE_REPO%:v%BUILD_NUMBER% ./app"
+            }
+        }
+        stage("Push to DockerHub") {
             steps {
                 withCredentials([usernamePassword(credentialsId: "dockerhub-credentials", usernameVariable: "USER", passwordVariable: "PASS")]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh "docker push ${FULL_IMAGE}"
+                    bat "docker login -u %USER% -p %PASS%"
+                    bat "docker push %IMAGE_REPO%:v%BUILD_NUMBER%"
                 }
             }
         }
-        stage("Update Manifest") {
+        stage("Update GitOps") {
             steps {
-                sh """
-                    sed -i 's|tag:.*|tag: "${IMAGE_TAG}"|' helm/react-app/values.yaml
-                    git config user.email "jenkins@ci.local"
-                    git config user.name "Jenkins"
-                    git add helm/react-app/values.yaml
-                    git commit -m "ci: update image to ${IMAGE_TAG}"
-                    git push origin main
-                """
+                bat "powershell -Command \"(Get-Content helm/react-app/values.yaml) -replace 'tag:.*', 'tag: v%BUILD_NUMBER%' | Set-Content helm/react-app/values.yaml\""
+                bat "git config user.email \"jenkins@ci.local\""
+                bat "git config user.name \"Jenkins\""
+                bat "git add helm/react-app/values.yaml"
+                bat "git commit -m \"ci: update image to v%BUILD_NUMBER%\""
+                bat "git push origin main"
             }
         }
+    }
+    post {
+        success { echo "Pipeline succeeded!" }
+        failure { echo "Pipeline failed!" }
     }
 }
