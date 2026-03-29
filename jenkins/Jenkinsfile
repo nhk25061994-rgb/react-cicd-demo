@@ -50,14 +50,21 @@ spec:
         }
         stage("Update GitOps") {
             steps {
-                sshagent(credentials: ['github-ssh']) {
-                    sh "sed -i 's|tag:.*|tag: ${IMAGE_TAG}|' helm/react-app/values.yaml"
-                    sh "git config user.email 'jenkins@ci.local'"
-                    sh "git config user.name 'Jenkins'"
-                    sh "git checkout -B main"
-                    sh "git add helm/react-app/values.yaml"
-                    sh "git commit -m 'ci: update image to ${IMAGE_TAG}'"
-                    sh "git push origin HEAD:main"
+                withCredentials([sshUserPrivateKey(credentialsId: "github-ssh", keyFileVariable: "SSH_KEY")]) {
+                    sh """
+                        mkdir -p ~/.ssh
+                        cp \$SSH_KEY ~/.ssh/id_ed25519
+                        chmod 600 ~/.ssh/id_ed25519
+                        ssh-keyscan github.com >> ~/.ssh/known_hosts
+                        export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
+                        sed -i 's|tag:.*|tag: ${IMAGE_TAG}|' helm/react-app/values.yaml
+                        git config user.email 'jenkins@ci.local'
+                        git config user.name 'Jenkins'
+                        git checkout -B main
+                        git add helm/react-app/values.yaml
+                        git commit -m 'ci: update image to ${IMAGE_TAG}'
+                        git push origin HEAD:main
+                    """
                 }
             }
         }
