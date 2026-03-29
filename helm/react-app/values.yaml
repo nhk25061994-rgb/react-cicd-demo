@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: nhk25061994-rgb/react-demo-app
+  repository: nhk519519/react-demo-app
   pullPolicy: IfNotPresent
   tag: "latest"
 
